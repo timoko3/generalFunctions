@@ -16,10 +16,10 @@ struct MathVector
     T& operator[]( size_t index) { return data[index]; }
     const T& operator[]( size_t index) const { return data[index]; }
 
-    Vector 
-    operator+( const Vector& other) const 
+    MathVector 
+    operator+( const MathVector& other) const 
     {
-        Vector result;
+        MathVector result;
         for ( size_t i = 0; i < N; ++i ) 
         {
             result.data[i] = this->data[i] + other.data[i];
@@ -27,16 +27,45 @@ struct MathVector
         return result;
     }
 
-    Vector 
+    MathVector 
     operator*( T scalar) const {
-        Vector result;
+        MathVector result;
         for ( size_t i = 0; i < N; ++i ) 
         {
             result.data[i] = this->data[i] * scalar;
         }
         return result;
     }
+
+    MathVector& 
+    operator+=(const MathVector& other)
+    {
+        for (std::size_t i = 0; i < N; ++i)
+        {
+            data[i] += other.data[i];
+        }
+
+        return *this;
+    }
 };
+
+template <typename T, std::size_t N>
+std::ostream& operator<<( std::ostream& os, const MathVector<T, N>& vec)
+{
+    os << "(";
+
+    for ( std::size_t i = 0; i < N; ++i )
+    {
+        os << vec.data[i];
+
+        if ( i + 1 < N )
+            os << ", ";
+    }
+
+    os << ")";
+
+    return os;
+}
 
 using Vector2d = MathVector<double, 2>;
 using Vector3d = MathVector<double, 3>;
