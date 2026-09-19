@@ -1,8 +1,14 @@
 #pragma once
 
+#include <array>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
+#include <fstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 namespace generalFunctions {
@@ -10,6 +16,44 @@ namespace generalFunctions {
 // Reads all bytes without changing line endings, including zero bytes.
 // Throws std::runtime_error on file errors.
 [[nodiscard]] std::string readFile(const std::filesystem::path& path);
+
+// Reads unsigned integer elements in the host's native byte order.
+// An empty file produces an empty vector. T must be an unqualified unsigned
+// integer type other than bool. No byte-order conversion is performed.
+// Throws std::runtime_error on file errors or an incomplete final element.
+template <typename T = std::uint8_t>
+[[nodiscard]] std::vector<T> readBinaryFile(const std::filesystem::path& path)
+{
+    static_assert(std::is_integral_v<T> && std::is_unsigned_v<T>
+                  && !std::is_same_v<T, bool>
+                  && std::is_same_v<T, std::remove_cv_t<T>>,
+                  "T must be an unqualified unsigned integer type other than bool");
+
+    std::ifstream file(path, std::ios::binary);
+    if (!file) {
+        throw std::runtime_error("Cannot open file for reading: " + path.string());
+    }
+
+    std::vector<T> result;
+    std::array<T, 64 * 1024 / sizeof(T)> buffer{};
+    while (true) {
+        file.read(reinterpret_cast<char*>(buffer.data()),
+                  static_cast<std::streamsize>(buffer.size() * sizeof(T)));
+        const auto byteCount = static_cast<std::size_t>(file.gcount());
+        // A short final read sets failbit and eofbit; this is normal.
+        if (file.bad() || (file.fail() && !file.eof())) {
+            throw std::runtime_error("Cannot read file: " + path.string());
+        }
+        if (byteCount % sizeof(T) != 0) {
+            throw std::runtime_error("File size is not divisible by element size: "
+                                     + path.string());
+        }
+        result.insert(result.end(), buffer.data(), buffer.data() + byteCount / sizeof(T));
+        if (file.eof()) {
+            return result;
+        }
+    }
+}
 
 // Reads lines without LF/CRLF endings; preserves empty lines.
 // A final newline does not create an extra empty line.
