@@ -22,14 +22,9 @@ static bool isAlpha(char c)
     return std::isalpha(static_cast<unsigned char>(c));
 }
 
-static bool isIdentifierStart(char c)
+static bool isIdentifierSym(char c)
 {
-    return isAlpha(c);
-}
-
-static bool isIdentifierContinue(char c)
-{
-    return isIdentifierStart(c) || isDigit(c);
+    return isAlpha(c) || isDigit(c);
 }
 
 Lexer::Lexer(const std::string& src_file_name)
@@ -79,10 +74,25 @@ void Lexer::skipSpaces()
 
 Token Lexer::getIntNum()
 {
+    const std::size_t old_pos    = pos_;
+    const std::size_t old_line   = cur_line_;
+    const std::size_t old_column = cur_column_;
+
     int value = 0;
     bool overflow = false;
 
-    while (!atEnd() && isDigit(curChar()))
+    if (atEnd() || !isDigit(curChar()))
+    {
+        return Token
+        {
+            TokenType::ERROR,
+            std::string{"Not INT"},
+            cur_line_,
+            cur_column_
+        };
+    }
+
+     while (!atEnd() && isDigit(curChar()))
     {
         const int digit = curChar() - '0';
 
@@ -98,6 +108,20 @@ Token Lexer::getIntNum()
         movePos();
     }
 
+    if (!atEnd() && !isSpace(curChar()))
+    {
+        pos_        = old_pos;
+        cur_line_   = old_line;
+        cur_column_ = old_column;
+
+        return Token
+        {
+            TokenType::ERROR,
+            0,
+            old_line,
+            old_column
+        };
+    }
 
     if (overflow)
     {
@@ -114,8 +138,8 @@ Token Lexer::getIntNum()
     {
         TokenType::INT,
         value,
-        cur_line_,
-        cur_column_
+        old_line,
+        old_column
     };
 }
 
@@ -123,7 +147,7 @@ Token Lexer::getIdentifier()
 {
     std::string value;
 
-    while (!atEnd() && isIdentifierContinue(curChar()))
+    while (!atEnd() && isIdentifierSym(curChar()))
     {
         value.push_back(curChar());
         movePos();
@@ -153,21 +177,10 @@ Token Lexer::getNextToken()
         };
     }
 
-    char c = curChar();
+    Token token = getIntNum();
 
-    if (isDigit(c))
-        return getIntNum();
+    if (token.type != TokenType::ERROR)
+        return token;
 
-    if (isIdentifierStart(c))
-        return getIdentifier();
-
-    movePos();
-
-    return Token
-    {
-        TokenType::ERROR,
-        std::string{"Unknown sym"},
-        cur_line_,
-        cur_column_
-    };
+    return getIdentifier();
 }
