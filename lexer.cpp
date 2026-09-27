@@ -1,25 +1,78 @@
-#include <iostream>
-#include <fstream>  
-#include <variant>
 #include <string>
-#include <filesystem>
 #include <sstream>
+#include <cctype>
+#include <limits>
+#include <utility>
 
 #include "lexer.h"
 #include "generalFunctions/file.h"
 
-using namespace std;
+static bool isDigit(char c)
+{
+    return std::isdigit(static_cast<unsigned char>(c));
+}
+
+static bool isSpace(char c)
+{
+    return std::isspace(static_cast<unsigned char>(c));
+}
+
+static bool isAlpha(char c)
+{
+    return std::isalpha(static_cast<unsigned char>(c));
+}
+
+static bool isIdentifierStart(char c)
+{
+    return isAlpha(c);
+}
+
+static bool isIdentifierContinue(char c)
+{
+    return isIdentifierStart(c) || isDigit(c);
+}
 
 Lexer::Lexer(const std::string& src_file_name)
-    : pos_(0),
-      src_file_name_(src_file_name),
-      cur_line_(1),
-      cur_column_(1),
+    : src_file_name_(src_file_name),
       buffer_(generalFunctions::readFile(src_file_name))
 {
 }
 
- std::string Lexer::getSrcFileName() const
+bool Lexer::atEnd() const
+{
+    return pos_ >= buffer_.size();
+}
+
+char Lexer::curChar() const
+{
+    return buffer_.at(pos_);
+}
+
+void Lexer::movePos()
+{
+    if (atEnd()) return;
+
+    if (curChar() == '\n')
+    {
+        ++cur_line_;
+        cur_column_ = 1;
+    }
+
+    else
+    {
+        ++cur_column_;
+    }
+
+    ++pos_;
+}
+
+void Lexer::skipSpaces()
+{
+    while (!atEnd() && isSpace(curChar()))
+        movePos();
+}
+
+ const std::string& Lexer::getSrcFileName() const
  {
     return src_file_name_;
  }
@@ -27,78 +80,94 @@ Lexer::Lexer(const std::string& src_file_name)
 Token Lexer::getIntNum()
 {
     int value = 0;
+    bool overflow = false;
 
-    if (pos_ >= buffer_.size() || !isdigit(buffer_[pos_]))
+    while (!atEnd() && isDigit(curChar()))
     {
-        return Token{ERROR, value, cur_line_, cur_column_};
+        const int digit = curChar() - '0';
+
+        if (value > (std::numeric_limits<int>::max() - digit) / 10)
+        {
+            overflow = true;
+        }
+        else if (!overflow)
+        {
+            value = value * 10 + digit;
+        }
+
+        movePos();
     }
 
-    int old_pos_ = pos_;
 
-    while (pos_ < buffer_.size() && isdigit(buffer_[pos_]))
+    if (overflow)
     {
-        value = value * 10 + (buffer_[pos_] - '0');
-        ++pos_;
-        ++cur_column_;
+        return Token 
+        {
+            TokenType::ERROR,
+            std::string{"overflow INT value"},
+            cur_line_,
+            cur_column_
+        };
     }
 
-    if (!isspace(buffer_[pos_]))
+    return Token
     {
-        pos_ = old_pos_;
-        return Token{ERROR, value, cur_line_, cur_column_};
-    }
-
-    return Token{INT, value, cur_line_, cur_column_};
+        TokenType::INT,
+        value,
+        cur_line_,
+        cur_column_
+    };
 }
 
 Token Lexer::getIdentifier()
 {
-    string value;
+    std::string value;
 
-    while (pos_ < buffer_.size() && !isspace(buffer_[pos_]))
+    while (!atEnd() && isIdentifierContinue(curChar()))
     {
-        value.push_back(buffer_[pos_]);
-        ++pos_;
-        ++cur_column_;
+        value.push_back(curChar());
+        movePos();
     }
 
-    return Token{IDENTIFIER, value, cur_line_, cur_column_};
-}
-
-void Lexer::skipSpaces()
-{
-    while (pos_ < buffer_.size() && isspace(buffer_[pos_]))
+    return Token
     {
-        if (buffer_[pos_] == '\n')
-        {
-            ++cur_line_;
-            cur_column_ = 0;
-        }
-        else
-        {
-            ++cur_column_;
-        }
-
-        ++pos_;
-    }
+        TokenType::IDENTIFIER,
+        std::move(value),
+        cur_line_,
+        cur_column_
+    };
 }
 
 Token Lexer::getNextToken()
 {
     skipSpaces();
 
-    if (pos_ >= buffer_.size())
-        return Token{END, 0, cur_line_, cur_column_};
+    if (atEnd())
+    {
+        return Token
+        {
+            TokenType::END,
+            0,
+            cur_line_,
+            cur_column_
+        };
+    }
 
-    Token nextToken = getIntNum();
+    char c = curChar();
 
-    if (nextToken.type != ERROR)
-        return nextToken;
+    if (isDigit(c))
+        return getIntNum();
 
-    nextToken = getIdentifier();
+    if (isIdentifierStart(c))
+        return getIdentifier();
 
-    if (nextToken.type != ERROR)
-        return nextToken;
+    movePos();
 
-    throw runtime_error("Unknown token type");
+    return Token
+    {
+        TokenType::ERROR,
+        std::string{"Unknown sym"},
+        cur_line_,
+        cur_column_
+    };
 }

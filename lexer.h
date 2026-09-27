@@ -1,12 +1,10 @@
-#ifndef PARSER_H
-#define PARSER_H
+#ifndef LEXER_H
+#define LEXER_H
 
-#include <iostream>
-#include <fstream>
 #include <variant>
 #include <string>
 
-enum Type
+enum TokenType
 {
     INT,
     END,
@@ -16,7 +14,7 @@ enum Type
 
 struct Token
 {
-    Type type;
+    TokenType type;
     std::variant<int, std::string> value;
     size_t line;
     size_t column;
@@ -24,23 +22,26 @@ struct Token
 
 class Lexer
 {
-    std::string buffer_;
-    size_t pos_;
-    size_t cur_line_;
-    size_t cur_column_;
     std::string src_file_name_;
+    std::string buffer_;
+
+    size_t pos_        = 0;
+    size_t cur_line_   = 1;
+    size_t cur_column_ = 1;
 
 public:
-    Lexer(const std::string& src_file_name);
+    explicit Lexer(const std::string& src_file_name);
     ~Lexer() = default;
     Token getNextToken();
-    std::string getSrcFileName() const;
+    const std::string& getSrcFileName() const;
 
 private:
     Token getIntNum();
     Token getIdentifier();
     void  skipSpaces();
-
+    bool  atEnd() const;
+    char  curChar() const;
+    void  movePos();
 };
 
-#endif /* PARSER_H */
+#endif /* LEXER_H */
