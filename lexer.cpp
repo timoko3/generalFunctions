@@ -7,25 +7,29 @@
 #include "lexer.h"
 #include "generalFunctions/file.h"
 
-static bool isDigit(char c)
+namespace 
 {
-    return std::isdigit(static_cast<unsigned char>(c));
+    bool isDigit(char c)
+    {
+        return std::isdigit(static_cast<unsigned char>(c));
+    }
+
+    bool isSpace(char c)
+    {
+        return std::isspace(static_cast<unsigned char>(c));
+    }
+
+    bool isAlpha(char c)
+    {
+        return std::isalpha(static_cast<unsigned char>(c));
+    }
+
+    bool isIdentifierSym(char c)
+    {
+        return isAlpha(c) || isDigit(c);
+    }
 }
 
-static bool isSpace(char c)
-{
-    return std::isspace(static_cast<unsigned char>(c));
-}
-
-static bool isAlpha(char c)
-{
-    return std::isalpha(static_cast<unsigned char>(c));
-}
-
-static bool isIdentifierSym(char c)
-{
-    return isAlpha(c) || isDigit(c);
-}
 
 Lexer::Lexer(const std::string& src_file_name)
     : src_file_name_(src_file_name),
