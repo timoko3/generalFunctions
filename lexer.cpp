@@ -98,9 +98,9 @@ Token Lexer::getIntNum()
 
      while (!atEnd() && isDigit(curChar()))
     {
-        const size_t digit = curChar() - '0';
+        const int digit = curChar() - '0';
 
-        if (value > (std::numeric_limits<size_t>::max() - digit) / 10)
+        if (value > (std::numeric_limits<int>::max() - digit) / 10)
         {
             overflow = true;
         }
