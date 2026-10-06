@@ -71,10 +71,10 @@ void Lexer::skipSpaces()
         movePos();
 }
 
- const std::string& Lexer::getSrcFileName() const
- {
+const std::string& Lexer::getSrcFileName() const
+{
     return src_file_name_;
- }
+}
 
 Token Lexer::getIntNum()
 {
@@ -104,6 +104,7 @@ Token Lexer::getIntNum()
         {
             overflow = true;
         }
+
         else if (!overflow)
         {
             value = value * 10 + digit;
