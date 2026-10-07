@@ -31,7 +31,6 @@ public:
     using TokenArr_t = std::vector<Token>;
 
     Lexer(const std::string& src_buf);
-    void printTokenArr();
     TokenArr_t run ();
 
 private:
