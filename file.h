@@ -13,14 +13,14 @@
 
 namespace generalFunctions {
 
-// Reads all bytes without changing line endings, including zero bytes.
-// Throws std::runtime_error on file errors.
-[[nodiscard]] std::string readFile(const std::filesystem::path& path);
+std::string readFile(const std::filesystem::path& path);
 
-// Reads unsigned integer elements in the host's native byte order.
-// An empty file produces an empty vector. T must be an unqualified unsigned
-// integer type other than bool. No byte-order conversion is performed.
-// Throws std::runtime_error on file errors or an incomplete final element.
+
+
+
+
+//xz che tam dalshe proishodit
+
 template <typename T = std::uint8_t>
 [[nodiscard]] std::vector<T> readBinaryFile(const std::filesystem::path& path)
 {

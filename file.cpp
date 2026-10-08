@@ -1,22 +1,56 @@
-#include "file.h"
-
 #include <algorithm>
-#include <array>
+#include <iostream>
 #include <cstddef>
 #include <fstream>
 #include <stdexcept>
 #include <utility>
 
-namespace generalFunctions {
+#include "file.h"
+
+namespace generalFunctions 
+{
+
+namespace
+{
+
+void fileError(const std::string msg, const std::filesystem::path& path)
+{
+    throw std::runtime_error(msg + ":" + path.string());
+}
+
+} //namespace
+
+std::string readFile(const std::filesystem::path& path)
+{
+    std::ifstream file(path);
+
+    if (!file) 
+    {
+        fileError("Cannot open file for reading", path);
+    }
+
+    std::string buffer;
+    std::string line;
+
+    while(std::getline(file, line))
+    {
+        buffer += line + "\n";
+    }
+
+    if (file.bad() || !file.eof()) 
+    {
+        fileError("Cannot read file", path);
+    }
+
+    return buffer;
+}
+
+
+
+//xz che tam dalshe proishodit
 namespace {
 
 constexpr std::size_t fileBufferSize = 64 * 1024;
-
-[[noreturn]] void fileError(const char* operation,
-                           const std::filesystem::path& path)
-{
-    throw std::runtime_error(std::string(operation) + ": " + path.string());
-}
 
 void writeContent(const std::filesystem::path& path,
                   std::string_view content, std::ios::openmode mode)
@@ -45,26 +79,14 @@ void writeContent(const std::filesystem::path& path,
 
 } // namespace
 
-std::string readFile(const std::filesystem::path& path)
+void writeFile(const std::filesystem::path& path, std::string_view content)
 {
-    std::ifstream file(path, std::ios::binary);
-    if (!file) {
-        fileError("Cannot open file for reading", path);
-    }
+    writeContent(path, content, std::ios::trunc);
+}
 
-    std::string result;
-    std::array<char, fileBufferSize> buffer{};
-    while (file.read(buffer.data(),
-                     static_cast<std::streamsize>(buffer.size()))) {
-        result.append(buffer.data(), buffer.size());
-    }
-    result.append(buffer.data(), static_cast<std::size_t>(file.gcount()));
-
-    // A short final read sets failbit and eofbit; this is normal.
-    if (file.bad() || !file.eof()) {
-        fileError("Cannot read file", path);
-    }
-    return result;
+void appendFile(const std::filesystem::path& path, std::string_view content)
+{
+    writeContent(path, content, std::ios::app);
 }
 
 std::vector<std::string> readLines(const std::filesystem::path& path)
@@ -87,16 +109,6 @@ std::vector<std::string> readLines(const std::filesystem::path& path)
         fileError("Cannot read file", path);
     }
     return lines;
-}
-
-void writeFile(const std::filesystem::path& path, std::string_view content)
-{
-    writeContent(path, content, std::ios::trunc);
-}
-
-void appendFile(const std::filesystem::path& path, std::string_view content)
-{
-    writeContent(path, content, std::ios::app);
 }
 
 } // namespace generalFunctions
