@@ -4,25 +4,10 @@
 #include <variant>
 #include <string>
 
+#include "token.h"
+
 namespace lexer
 {
-
-enum class TokenType
-{
-    INT,
-    END,
-    ERROR,
-    IDENTIFIER
-};
-
-struct Token
-{
-    TokenType type;
-    std::variant<int, std::string> data;
-
-    std::size_t line;
-    std::size_t col;
-};
 
 class Lexer 
 {
@@ -30,13 +15,16 @@ class Lexer
 public:
     using TokenArr_t = std::vector<Token>;
 
-    Lexer(const std::string& src_buf);
-    TokenArr_t run ();
+    Lexer(std::string src_buf, std::string file_name = "unknown_file");
+
+    TokenArr_t tokenize ();
+    const std::string& getFileName() const; 
 
 private:
 
-    const std::string& buf_;
+    std::string buf_;
     TokenArr_t token_arr_;
+    std::string file_name_;
 
     std::size_t pos_      = 0;
     std::size_t cur_line_ = 1;

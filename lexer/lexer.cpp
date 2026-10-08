@@ -6,7 +6,7 @@
 #include <limits>
 #include <iostream>
 
-#include "lexer_new.h"
+#include "lexer.h"
 
 namespace lexer
 {
@@ -29,7 +29,13 @@ namespace
     }
 }
 
-Lexer::Lexer(const std::string& src_buf) : buf_(src_buf) {};
+const std::string& Lexer::getFileName() const
+{
+    return file_name_;
+}
+
+Lexer::Lexer(std::string src_buf, std::string file_name) 
+    : buf_(std::move(src_buf)), file_name_(std::move(file_name)){};
 
 bool Lexer::atEnd(std::size_t pos) const
 {
@@ -144,11 +150,14 @@ Token Lexer::makeIdentToken(const std::string ident)
     return {TokenType::IDENTIFIER, ident, cur_line_, cur_col_};
 }
 
-Lexer::TokenArr_t Lexer::run ()
+Lexer::TokenArr_t Lexer::tokenize ()
 {
-    while (!atEnd(pos_))
+    while (true)
     {
         skipSpaces();
+
+        if (atEnd(pos_))
+        break;
 
         Token cur_token = readInt();
 
@@ -165,8 +174,6 @@ Lexer::TokenArr_t Lexer::run ()
             token_arr_.push_back(makeErrorToken("Unknown sym"));
             return token_arr_;
         }
-
-        skipSpaces();
     }
     
     token_arr_.push_back(makeEndToken());
