@@ -41,7 +41,7 @@ const Token& TokenStream::peekToken() const
     return tokens_.at(pos_);
 }
 
-const Token& TokenStream::movePos()
+void TokenStream::movePos()
 {
     const Token& token = peekToken();
 
@@ -50,7 +50,7 @@ const Token& TokenStream::movePos()
         ++pos_;
     }
 
-    return token;
+    return;
 }
 
 bool TokenStream::atEnd() const
@@ -74,11 +74,6 @@ const Token& TokenStream::expectToken(TokenType type, const std::string& msg)
 
     if (curToken.type != type)
     {
-        if (atEnd())
-        {
-            failAtToken(curToken, "END of token arr did not expect");
-        }
-
         failAtToken(curToken, msg);
     }
 

@@ -17,7 +17,7 @@ public:
     const std::string& getFileName() const; 
     
     const Token& peekToken() const;
-    const Token& movePos();
+    void movePos();
 
     bool atEnd() const;
     bool isMatchType(TokenType type);
