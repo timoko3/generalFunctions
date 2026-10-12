@@ -19,7 +19,6 @@ bool willOverflow(int value, int digit) {
 
 Lexer::Lexer(std::string src_buf, std::string file_name)
     : buf_(std::move(src_buf)),
-      tokenStream_(file_name),
       fileName_(std::move(file_name)) {}
 
 const std::string& Lexer::getFileName() const {
@@ -107,6 +106,8 @@ Token Lexer::makeIdentToken(std::string ident) const {
 }
 
 TokenStream Lexer::tokenize() {
+    TokenStream tokenStream(fileName_);
+
     while (true) {
 
         skipSpaces();
@@ -118,24 +119,24 @@ TokenStream Lexer::tokenize() {
         Token token = readInt();
 
         if (token.type != TokenType::ERROR) {
-            tokenStream_.addToken(std::move(token));
+            tokenStream.addToken(std::move(token));
             continue;
         }
 
         if (isIdentSym(getSym(pos_))) {
-            tokenStream_.addToken(readIdent());
+            tokenStream.addToken(readIdent());
         }
 
         if (!atEnd(pos_) && !std::isspace(getSym(pos_))) {
-            tokenStream_.addToken(makeErrorToken("Unknown sym"));
-            tokenStream_.verify(); // Throws on ERROR.
+            tokenStream.addToken(makeErrorToken("Unknown sym"));
+            tokenStream.verify(); // Throws on ERROR.
         }
     }
 
-    tokenStream_.addToken(makeEndToken());
-    tokenStream_.verify();
+    tokenStream.addToken(makeEndToken());
+    tokenStream.verify();
 
-    return tokenStream_;
+    return tokenStream;
 }
 
 } // namespace lexer

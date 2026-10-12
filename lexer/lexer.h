@@ -17,7 +17,6 @@ public:
 
 private:
     std::string buf_;
-    TokenStream tokenStream_;
     std::string fileName_;
 
     std::size_t pos_ = 0;
