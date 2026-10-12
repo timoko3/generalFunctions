@@ -1,9 +1,7 @@
 #include <vector>
-#include <variant>
 #include <string>
 #include <cctype>
 #include <limits>
-#include <iostream>
 
 #include "lexer.h"
 
@@ -12,61 +10,49 @@ namespace lexer
 
 namespace
 {
-    bool isDigit(unsigned char c)
-    {
-        return std::isdigit(c);
-    }
-
-    bool isSpace(unsigned char c)
-    {
-        return std::isspace(c);
-    }
-
-    bool isIdentSym(unsigned char c)
+    bool isIdentSym(const unsigned char c)
     {
         return std::isdigit(c) || std::isalpha(c);
+    }
+
+    bool willOverflow(const int value, const int digit)
+    {
+        return value > (std::numeric_limits<int>::max() - digit) / 10;
     }
 }
 
 const std::string& Lexer::getFileName() const
 {
-    return file_name_;
+    return fileName_;
 }
 
 Lexer::Lexer(std::string src_buf, std::string file_name) 
-    : buf_(std::move(src_buf)), file_name_(std::move(file_name)){};
+    : buf_(std::move(src_buf)), fileName_(std::move(file_name)) {};
 
-bool Lexer::atEnd(std::size_t pos) const
-{
+bool Lexer::atEnd(std::size_t pos) const {
     return pos >= buf_.size();
 }
 
-void Lexer::skipSpaces()
-{
-    while (!atEnd(pos_) && isSpace(getSym(pos_)))
-        movePosTo(pos_ + 1);
+void Lexer::skipSpaces() {
+    while (!atEnd(pos_) && std::isspace(getSym(pos_)))
+        advanceTo(pos_ + 1);
 }
 
-char Lexer::getSym(std::size_t pos) const
-{
-    return buf_.at(pos);
+unsigned char Lexer::getSym(std::size_t pos) const {
+    return static_cast<unsigned char> (buf_.at(pos));
 }
 
-void Lexer::movePosTo(std::size_t dst_pos)
-{
-    while(pos_ < dst_pos)
-    {
+void Lexer::advanceTo(std::size_t dst_pos) {
+    while(pos_ < dst_pos) {
         if (atEnd(pos_)) return;
 
-        if (getSym(pos_) == '\n')
-        {
-            ++cur_line_;
-            cur_col_ = 1;
+        if (getSym(pos_) == '\n') {
+            ++curLine_;
+            curCol_ = 1;
         }
 
-        else
-        {
-            ++cur_col_;
+        else {
+            ++curCol_;
         }
 
         ++pos_;
@@ -79,104 +65,86 @@ Token Lexer::readInt()
 
     int value = 0;
 
-    if (atEnd(pos) || !isDigit(getSym(pos)))
-    {
+    if (atEnd(pos) || !std::isdigit((getSym(pos)))) {
         return makeErrorToken("It is not INT");
     }
 
-    while (!atEnd(pos) && isDigit(getSym(pos)))
-    {
+    while (!atEnd(pos) && std::isdigit((getSym(pos)))) {
         const int digit = getSym(pos) - '0';
 
-        if (value > (std::numeric_limits<int>::max() - digit) / 10)
-        {
+        if (willOverflow(value, digit)) {
             return makeErrorToken("INT is overflow");
         }
 
         value = value * 10 + digit;
-
         pos++;
     }
 
-    if (!atEnd(pos) && !isSpace(getSym(pos)))
-    {
+    if (!atEnd(pos) && !std::isspace(getSym(pos))) {
         return makeErrorToken("It is not INT");
     }
 
     Token retToken = makeIntToken(value);
-
-    movePosTo(pos);
+    advanceTo(pos);
 
     return retToken;
 }
 
-Token Lexer::readIdent()
-{
+Token Lexer::readIdent() {
     std::size_t pos = pos_;
 
-    std::string value;
-
-    while (!atEnd(pos) && isIdentSym(getSym(pos)))
-    {
-        value.push_back(getSym(pos));
-        pos++;
+    while (!atEnd(pos) && isIdentSym(getSym(pos))) {
+        ++pos;
     }
 
-    Token retToken = makeIdentToken(value);
-
-    movePosTo(pos);
+    Token retToken = makeIdentToken(buf_.substr(pos_, pos - pos_));
+    advanceTo(pos);
 
     return retToken;
 }
 
-Token Lexer::makeErrorToken(const std::string messege)
-{
-    return {TokenType::ERROR, messege, cur_line_, cur_col_};
+Token Lexer::makeErrorToken(std::string messege) const {
+    return {TokenType::ERROR, std::move(messege), curLine_, curCol_};
 }
 
-Token Lexer::makeIntToken(const int value)
-{
-    return {TokenType::INT, value, cur_line_, cur_col_};
+Token Lexer::makeIntToken(const int value) const {
+    return {TokenType::INT, value, curLine_, curCol_};
 }
 
-Token Lexer::makeEndToken()
-{
-    return {TokenType::END, 0, cur_line_, cur_col_};
+Token Lexer::makeEndToken() const {
+    return {TokenType::END, 0, curLine_, curCol_};
 }
 
-Token Lexer::makeIdentToken(const std::string ident)
-{
-    return {TokenType::IDENTIFIER, ident, cur_line_, cur_col_};
+Token Lexer::makeIdentToken(std::string ident) const {
+    return {TokenType::IDENTIFIER, std::move(ident), curLine_, curCol_};
 }
 
-Lexer::TokenArr_t Lexer::tokenize ()
-{
-    while (true)
-    {
+Lexer::TokenArr_t Lexer::tokenize () {
+    while (true) {
         skipSpaces();
 
         if (atEnd(pos_))
-        break;
+            break;
 
         Token cur_token = readInt();
 
-        if (cur_token.type != TokenType::ERROR)
-        {
-            token_arr_.push_back(cur_token);
+        if (cur_token.type != TokenType::ERROR) {
+            tokenArr_.push_back(cur_token);
             continue;
         }
 
-        token_arr_.push_back(readIdent());
+        if (isIdentSym(getSym(pos_))) {
+            tokenArr_.push_back(readIdent());
+        }
 
-        if (!atEnd(pos_) && !isSpace(getSym(pos_)))
-        {
-            token_arr_.push_back(makeErrorToken("Unknown sym"));
-            return token_arr_;
+        if (!atEnd(pos_) && !std::isspace(getSym(pos_))) {
+            tokenArr_.push_back(makeErrorToken("Unknown sym"));
+            return tokenArr_;
         }
     }
     
-    token_arr_.push_back(makeEndToken());
-    return token_arr_;
+    tokenArr_.push_back(makeEndToken());
+    return tokenArr_;
 }
 
 
