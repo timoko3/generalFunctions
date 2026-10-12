@@ -6,29 +6,34 @@
 
 #include "token.h"
 
-namespace lexer
-{
+namespace lexer {
 
-class TokenStream
-{
+class Lexer;
+
+class TokenStream {
+    friend class Lexer;
+
 public:
-    TokenStream(std::vector<Token> tokens, std::string file_name = "unknown_file");
+    TokenStream(std::string file_name = "unknown_file");
 
-    const std::string& getFileName() const; 
-    
+    const std::string& getFileName() const;
+
     const Token& peekToken() const;
     void movePos();
 
     bool atEnd() const;
-    bool isMatchType(TokenType type);
+    bool isMatchType(TokenType type) const;
 
     const Token& expectToken(TokenType type, const std::string& msg);
     int expectInt(const std::string& msg);
     const std::string& expectIdent(const std::string& msg);
 
     void failAtToken(const Token& token, const std::string& msg) const;
+    void verify() const;
 
 private:
+    void addToken(Token token);
+
     std::vector<Token> tokens_;
     std::string file_name_;
     std::size_t pos_ = 0;

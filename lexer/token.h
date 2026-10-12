@@ -3,19 +3,16 @@
 #include <variant>
 #include <string>
 
-namespace lexer
-{
+namespace lexer {
 
-enum class TokenType
-{
+enum class TokenType {
     INT,
     END,
     ERROR,
     IDENTIFIER
 };
 
-struct Token
-{
+struct Token {
     TokenType type;
     std::variant<int, std::string> data;
 
