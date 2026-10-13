@@ -18,7 +18,7 @@ public:
 
 private:
     std::string buf_;
-    std::string fileName_;
+    std::filesystem::path fileName_;
 
     std::size_t pos_ = 0;
     std::size_t curLine_ = 1;

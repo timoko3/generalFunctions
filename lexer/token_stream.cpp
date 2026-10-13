@@ -3,11 +3,12 @@
 #include <stdexcept>
 #include <utility>
 #include <variant>
+#include <filesystem>
 
 namespace lexer {
 
-TokenStream::TokenStream(std::string file_name)
-    : fileName_(std::move(file_name)) {}
+TokenStream::TokenStream(std::filesystem::path fileName)
+    : fileName_(std::move(fileName)) {}
 
 void TokenStream::verify() const {
     if (tokens_.empty()) {
@@ -25,7 +26,7 @@ void TokenStream::verify() const {
     }
 }
 
-const std::string& TokenStream::getFileName() const {
+const std::filesystem::path& TokenStream::getFileName() const {
     return fileName_;
 }
 
@@ -70,7 +71,7 @@ const std::string& TokenStream::expectIdent(const std::string& msg) {
 }
 
 void TokenStream::failAtToken(const Token& token, const std::string& msg) const {
-    throw std::runtime_error(fileName_ + ":" + std::to_string(token.line) + ":" +
+    throw std::runtime_error(fileName_.string() + ":" + std::to_string(token.line) + ":" +
                              std::to_string(token.col) + ": " + msg);
 }
 

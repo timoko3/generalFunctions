@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <string>
 #include <vector>
+#include <filesystem>
 
 #include "token.h"
 
@@ -14,9 +15,9 @@ class TokenStream {
     friend class Lexer;
 
 public:
-    TokenStream(std::string file_name = "unknown_file");
+    TokenStream(std::filesystem::path fileName = "unknown_file");
 
-    const std::string& getFileName() const;
+    const std::filesystem::path& getFileName() const;
 
     const Token& peekToken() const;
     void movePos();
@@ -35,7 +36,7 @@ private:
     void addToken(Token token);
 
     std::vector<Token> tokens_;
-    std::string fileName_;
+    std::filesystem::path fileName_;
     std::size_t pos_ = 0;
 };
 
