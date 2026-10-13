@@ -35,7 +35,7 @@ private:
     void addToken(Token token);
 
     std::vector<Token> tokens_;
-    std::string file_name_;
+    std::string fileName_;
     std::size_t pos_ = 0;
 };
 

@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <string>
+#include <filesystem>
 
 #include "token.h"
 #include "token_stream.h"
@@ -10,10 +11,10 @@ namespace lexer {
 
 class Lexer {
 public:
-    Lexer(std::string src_buf, std::string file_name = "unknown_file");
+    Lexer(std::string srcBuf, std::filesystem::path fileName = "unknown_file");
 
+    const std::filesystem::path& getFileName() const;
     TokenStream tokenize();
-    const std::string& getFileName() const;
 
 private:
     std::string buf_;

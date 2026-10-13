@@ -7,7 +7,7 @@
 namespace lexer {
 
 TokenStream::TokenStream(std::string file_name)
-    : file_name_(std::move(file_name)) {}
+    : fileName_(std::move(file_name)) {}
 
 void TokenStream::verify() const {
     if (tokens_.empty()) {
@@ -26,7 +26,7 @@ void TokenStream::verify() const {
 }
 
 const std::string& TokenStream::getFileName() const {
-    return file_name_;
+    return fileName_;
 }
 
 const Token& TokenStream::peekToken() const {
@@ -70,7 +70,7 @@ const std::string& TokenStream::expectIdent(const std::string& msg) {
 }
 
 void TokenStream::failAtToken(const Token& token, const std::string& msg) const {
-    throw std::runtime_error(file_name_ + ":" + std::to_string(token.line) + ":" +
+    throw std::runtime_error(fileName_ + ":" + std::to_string(token.line) + ":" +
                              std::to_string(token.col) + ": " + msg);
 }
 

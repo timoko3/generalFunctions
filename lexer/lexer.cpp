@@ -1,8 +1,9 @@
-#include "lexer.h"
-
 #include <cctype>
 #include <limits>
 #include <utility>
+#include <filesystem>
+
+#include "lexer.h"
 
 namespace lexer {
 namespace {
@@ -17,11 +18,11 @@ bool willOverflow(int value, int digit) {
 
 } // namespace
 
-Lexer::Lexer(std::string src_buf, std::string file_name)
-    : buf_(std::move(src_buf)),
-      fileName_(std::move(file_name)) {}
+Lexer::Lexer(std::string srcBuf, std::filesystem::path fileName)
+    : buf_(std::move(srcBuf)),
+      fileName_(std::move(fileName)) {}
 
-const std::string& Lexer::getFileName() const {
+const std::filesystem::path& Lexer::getFileName() const {
     return fileName_;
 }
 
