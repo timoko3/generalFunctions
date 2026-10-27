@@ -1,8 +1,9 @@
 #pragma once
 
 #include <cstddef>
-#include <string>
 #include <filesystem>
+#include <string>
+#include <string_view>
 
 #include "token.h"
 #include "token_stream.h"
@@ -19,13 +20,13 @@ public:
 private:
     std::string buf_;
     std::filesystem::path fileName_;
-
     std::size_t pos_ = 0;
     std::size_t curLine_ = 1;
     std::size_t curCol_ = 1;
 
-    Token readInt();
-    Token readIdent();
+    Token readToken();
+    Token readInt(std::string_view text);
+    Token readDouble(std::string_view text);
 
     bool atEnd(std::size_t pos) const;
     unsigned char getSym(std::size_t pos) const;
@@ -35,6 +36,7 @@ private:
     Token makeErrorToken(std::string message) const;
     Token makeIdentToken(std::string ident) const;
     Token makeIntToken(int value) const;
+    Token makeDoubleToken(double value) const;
     Token makeEndToken() const;
 };
 

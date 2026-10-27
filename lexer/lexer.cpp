@@ -1,34 +1,70 @@
-#include <cctype>
-#include <limits>
-#include <utility>
-#include <filesystem>
-
 #include "lexer.h"
+
+#include <charconv>
+#include <cctype>
+#include <cmath>
+#include <system_error>
+#include <utility>
 
 namespace lexer {
 namespace {
 
-bool isIdentSym(unsigned char c) {
-    return std::isdigit(c) || std::isalpha(c);
+bool isDigit(char c) { return c >= '0' && c <= '9'; }
+
+bool isIdent(std::string_view text) {
+    if (text.empty()) return false;
+    for (const unsigned char c : text) {
+        if (!std::isdigit(c) && !std::isalpha(c)) return false;
+    }
+    return true;
 }
 
-bool willOverflow(int value, int digit) {
-    return value > (std::numeric_limits<int>::max() - digit) / 10;
+bool isInteger(std::string_view text, bool allowSign) {
+    std::size_t pos = 0;
+    if (allowSign && !text.empty() && (text.front() == '+' || text.front() == '-')) ++pos;
+    if (pos == text.size()) return false;
+    for (; pos < text.size(); ++pos) {
+        if (!isDigit(text[pos])) return false;
+    }
+    return true;
+}
+
+bool isReal(std::string_view text) {
+    std::size_t pos = 0;
+    if (pos < text.size() && (text[pos] == '+' || text[pos] == '-')) ++pos;
+
+    bool hasDigits = false;
+    while (pos < text.size() && isDigit(text[pos])) {
+        hasDigits = true;
+        ++pos;
+    }
+    if (pos < text.size() && text[pos] == '.') {
+        ++pos;
+        while (pos < text.size() && isDigit(text[pos])) {
+            hasDigits = true;
+            ++pos;
+        }
+    }
+    if (!hasDigits) return false;
+
+    if (pos < text.size() && (text[pos] == 'e' || text[pos] == 'E')) {
+        ++pos;
+        if (pos < text.size() && (text[pos] == '+' || text[pos] == '-')) ++pos;
+        const std::size_t start = pos;
+        while (pos < text.size() && isDigit(text[pos])) ++pos;
+        if (pos == start) return false;
+    }
+    return pos == text.size();
 }
 
 } // namespace
 
 Lexer::Lexer(std::string srcBuf, std::filesystem::path fileName)
-    : buf_(std::move(srcBuf)),
-      fileName_(std::move(fileName)) {}
+    : Lexer(std::move(srcBuf), std::move(fileName), LexerOptions{}) {}
 
-const std::filesystem::path& Lexer::getFileName() const {
-    return fileName_;
-}
+const std::filesystem::path& Lexer::getFileName() const { return fileName_; }
 
-bool Lexer::atEnd(std::size_t pos) const {
-    return pos >= buf_.size();
-}
+bool Lexer::atEnd(std::size_t pos) const { return pos >= buf_.size(); }
 
 unsigned char Lexer::getSym(std::size_t pos) const {
     return static_cast<unsigned char>(buf_.at(pos));
@@ -47,97 +83,94 @@ void Lexer::advanceTo(std::size_t dst_pos) {
 }
 
 void Lexer::skipSpaces() {
-    while (!atEnd(pos_) && std::isspace(getSym(pos_))) {
-        advanceTo(pos_ + 1);
-    }
+    while (!atEnd(pos_) && std::isspace(getSym(pos_))) advanceTo(pos_ + 1);
 }
 
-Token Lexer::readInt() {
-    std::size_t pos = pos_;
+Token Lexer::readInt(std::string_view text) {
+    std::string_view digits = text;
+
+    if (digits.front() == '+') digits.remove_prefix(1);
+
     int value = 0;
+    const char* const end = digits.data() + digits.size();
+    const auto result = std::from_chars(digits.data(), end, value);
 
-    if (atEnd(pos) || !std::isdigit(getSym(pos))) {
-        return makeErrorToken("It is not INT");
+    if (result.ec == std::errc{} && result.ptr == end) return makeIntToken(value);
+
+    if (result.ec == std::errc::result_out_of_range) {
+        return makeErrorToken("INT is overflow");
     }
 
-    while (!atEnd(pos) && std::isdigit(getSym(pos))) {
-        const int digit = getSym(pos) - '0';
-        if (willOverflow(value, digit)) {
-            return makeErrorToken("INT is overflow");
-        }
-        value = value * 10 + digit;
-        ++pos;
-    }
-
-    if (!atEnd(pos) && !std::isspace(getSym(pos))) {
-        return makeErrorToken("It is not INT");
-    }
-
-    Token token = makeIntToken(value);
-    advanceTo(pos);
-    return token;
+    return makeErrorToken("It is not INT");
 }
 
-Token Lexer::readIdent() {
+Token Lexer::readDouble(std::string_view text) {
+    if (text.front() == '+') text.remove_prefix(1);
 
-    std::size_t pos = pos_;
-    while (!atEnd(pos) && isIdentSym(getSym(pos))) {
-        ++pos;
+    double value = 0.0;
+    const char* const end = text.data() + text.size();
+    const auto result = std::from_chars(text.data(), end, value, std::chars_format::general);
+
+    if (result.ec == std::errc::result_out_of_range || !std::isfinite(value)) {
+        return makeErrorToken("DOUBLE is out of range");
+    }
+    
+    if (result.ec != std::errc{} || result.ptr != end) {
+        return makeErrorToken("It is not DOUBLE");
+    }
+    return makeDoubleToken(value);
+}
+
+Token Lexer::readToken() {
+    std::size_t end = pos_;
+
+    while (!atEnd(end) && !std::isspace(getSym(end))) ++end;
+
+    const std::string_view text = std::string_view(buf_).substr(pos_, end - pos_);
+
+    Token token = {};
+    if (isInteger(text, true)) {
+        token = readInt(text);
+    } else if (isReal(text)) {
+        token = readDouble(text);
+    } else if (isIdent(text)) {
+        token = makeIdentToken(std::string(text));
+    } else {
+        token = makeErrorToken("Unknown sym in token: " + std::string(text));
     }
 
-    Token token = makeIdentToken(buf_.substr(pos_, pos - pos_));
-    advanceTo(pos);
+    advanceTo(end);
     return token;
 }
 
 Token Lexer::makeErrorToken(std::string message) const {
     return {TokenType::ERROR, std::move(message), curLine_, curCol_};
 }
-
 Token Lexer::makeIntToken(int value) const {
     return {TokenType::INT, value, curLine_, curCol_};
 }
-
-Token Lexer::makeEndToken() const {
-    return {TokenType::END, 0, curLine_, curCol_};
+Token Lexer::makeDoubleToken(double value) const {
+    return {TokenType::DOUBLE, value, curLine_, curCol_};
 }
-
 Token Lexer::makeIdentToken(std::string ident) const {
     return {TokenType::IDENTIFIER, std::move(ident), curLine_, curCol_};
 }
+Token Lexer::makeEndToken() const { return {TokenType::END, 0, curLine_, curCol_}; }
 
 TokenStream Lexer::tokenize() {
-    TokenStream tokenStream(fileName_);
+    std::vector<Token> tokens;
 
     while (true) {
-
         skipSpaces();
+        if (atEnd(pos_)) break;
 
-        if (atEnd(pos_)) {
-            break;
-        }
+        tokens.push_back(readToken());
 
-        Token token = readInt();
-
-        if (token.type != TokenType::ERROR) {
-            tokenStream.addToken(std::move(token));
-            continue;
-        }
-
-        if (isIdentSym(getSym(pos_))) {
-            tokenStream.addToken(readIdent());
-        }
-
-        if (!atEnd(pos_) && !std::isspace(getSym(pos_))) {
-            tokenStream.addToken(makeErrorToken("Unknown sym"));
-            tokenStream.verify(); // Throws on ERROR.
-        }
+        if (tokens.back().type == TokenType::ERROR) break;
     }
 
-    tokenStream.addToken(makeEndToken());
-    tokenStream.verify();
-
-    return tokenStream;
+    tokens.push_back(makeEndToken());
+    return TokenStream(std::move(tokens), fileName_);
 }
 
 } // namespace lexer
