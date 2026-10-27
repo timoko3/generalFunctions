@@ -25,7 +25,7 @@ public:
     const std::string& expectIdent(const std::string& msg);
     double expectDouble(const std::string& msg);
 
-    void failAtToken(const Token& token, const std::string& msg) const;
+    [[noreturn]] void failAtToken(const Token& token, const std::string& msg) const;
     void verify() const;
 
 private:

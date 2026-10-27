@@ -60,7 +60,7 @@ bool isReal(std::string_view text) {
 } // namespace
 
 Lexer::Lexer(std::string srcBuf, std::filesystem::path fileName)
-    : Lexer(std::move(srcBuf), std::move(fileName), LexerOptions{}) {}
+    : buf_(std::move(srcBuf)), fileName_(std::move(fileName)) {}
 
 const std::filesystem::path& Lexer::getFileName() const { return fileName_; }
 

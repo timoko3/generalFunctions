@@ -97,7 +97,7 @@ double TokenStream::expectDouble(const std::string& msg) {
     failAtToken(token, msg);
 }
 
-void TokenStream::failAtToken(const Token& token, const std::string& msg) const {
+[[noreturn]] void TokenStream::failAtToken(const Token& token, const std::string& msg) const {
     throw std::runtime_error(fileName_.string() + ":" + std::to_string(token.line) + ":" +
                              std::to_string(token.col) + ": " + msg);
 }
